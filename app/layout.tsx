@@ -17,9 +17,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
   const host = requestHeaders.get("host") ?? "localhost:3000";
   const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  const image = `${protocol}://${host}/og.png`;
-  const title = "Perde — UYAP Öncesi Kişisel Veri Maskeleme";
-  const description = "Hukuki evraklardaki kişisel verileri cihazınızda tespit edin ve güvenle maskeleyin.";
+  const image = `${protocol}://${host}/og-ai.png`;
+  const title = "Perde — AI Öncesi Kişisel Veri Maskeleme";
+  const description = "Hukuki evrakları yapay zekâ araçlarıyla paylaşmadan önce kişisel verileri cihazınızda tespit edin ve maskeleyin.";
   return {
     title,
     description,

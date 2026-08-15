@@ -12,8 +12,6 @@ type LoadedDocument = {
   extension: string;
   pages?: number;
   warning?: string;
-  sourceBytes?: ArrayBuffer;
-  udfXml?: string;
 };
 
 const MAX_SIZE = 20 * 1024 * 1024;
@@ -47,7 +45,7 @@ async function readFile(file: File): Promise<LoadedDocument> {
     const udfXml = await contentFile.async("text");
     const contentMatch = udfXml.match(/<content\b[^>]*>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/content>/i);
     if (!contentMatch) throw new Error("UDF metin içeriği okunamadı.");
-    return { name: file.name, size: file.size, extension, text: contentMatch[1], sourceBytes, udfXml, warning: "Maskeli UDF dışa aktarılırken eski elektronik imza kaldırılır; belgeyi UYAP'ta yeniden imzalamanız gerekir." };
+    return { name: file.name, size: file.size, extension, text: contentMatch[1], warning: "UDF metni çözümlendi. AI ile paylaşmak için maskeli PDF veya metin kopyası oluşturabilirsiniz." };
   }
 
   if (extension === "pdf") {
@@ -194,25 +192,6 @@ export default function Home() {
     URL.revokeObjectURL(link.href);
   }
 
-  async function downloadUdf() {
-    if (!document?.sourceBytes || !document.udfXml) return;
-    const JSZip = (await import("jszip")).default;
-    const zip = await JSZip.loadAsync(document.sourceBytes);
-    const sameLengthMasked = [...findings]
-      .filter((item) => item.enabled)
-      .sort((a, b) => b.start - a.start)
-      .reduce((output, finding) => `${output.slice(0, finding.start)}${finding.value.replace(/\S/g, "*")}${output.slice(finding.end)}`, document.text);
-    const updatedXml = document.udfXml.replace(/(<content\b[^>]*>\s*<!\[CDATA\[)[\s\S]*?(\]\]>\s*<\/content>)/i, `$1${sameLengthMasked}$2`);
-    zip.file("content.xml", updatedXml);
-    zip.remove("sign.sgn");
-    const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
-    const link = window.document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${document.name.replace(/\.udf$/i, "")}-maskeli.udf`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  }
-
   function addManualName() {
     if (!document) return;
     const value = manualName.trim();
@@ -259,7 +238,7 @@ export default function Home() {
       <main className="review-shell">
         <header className="topbar review-topbar">
           <a className="brand" href="#" onClick={(event) => { event.preventDefault(); reset(); }}><span className="brand-mark">P</span><span>PERDE</span></a>
-          <div className="review-progress"><span className="done"><Check size={12} /> Yükle</span><i /><span className="current">2. İncele</span><i /><span>3. Dışa aktar</span></div>
+          <div className="review-progress"><span className="done"><Check size={12} /> Yükle</span><i /><span className="current">2. İncele</span><i /><span>3. AI kopyası</span></div>
           <button className="quiet-button" onClick={reset}><RotateCcw size={15} /> Yeni evrak</button>
         </header>
 
@@ -284,7 +263,7 @@ export default function Home() {
             <div className="document-toolbar"><span><FileCheck2 size={16} /> Maskeleme önizlemesi</span><span className="legend"><i /> Maskeli veri</span></div>
             {document.warning && <div className="warning-banner"><Sparkles size={16} /> {document.warning}</div>}
             <article className="paper" aria-label="Belge maskeleme önizlemesi">
-              <div className="paper-stamp">UYAP ÖNCESİ KOPYA</div>
+              <div className="paper-stamp">AI İÇİN GÜVENLİ KOPYA</div>
               <div className="document-text">{renderDocument(document.text, findings, toggleFinding)}</div>
             </article>
           </section>
@@ -308,13 +287,9 @@ export default function Home() {
               ))}
             </div>
             <div className="export-box">
-              <p><b>UYAP’a hazır kopya</b>Orijinal dosyanız değişmeden kalır.</p>
-              {document.extension === "udf" ? (
-                <button className="primary-action" onClick={() => void downloadUdf()}><Download size={16} /> Maskeli UDF indir <ChevronRight size={16} /></button>
-              ) : (
-                <button className="primary-action" onClick={printPdf}><Download size={16} /> PDF olarak kaydet <ChevronRight size={16} /></button>
-              )}
-              <button className="secondary-action" onClick={downloadTxt}>Maskeli metni indir</button>
+              <p><b>AI ile paylaşmaya hazır</b>Yalnızca maskeli kopyayı AI aracına yükleyin.</p>
+              <button className="primary-action" onClick={printPdf}><Download size={16} /> AI için PDF kaydet <ChevronRight size={16} /></button>
+              <button className="secondary-action" onClick={downloadTxt}>AI için maskeli metni indir</button>
             </div>
           </aside>
         </section>
@@ -330,9 +305,9 @@ export default function Home() {
       </header>
       <section className="workspace">
         <div className="intro">
-          <span className="eyebrow">UYAP ÖNCESİ GÜVENLİK KATMANI</span>
+          <span className="eyebrow">YAPAY ZEKÂ ÖNCESİ GÜVENLİK KATMANI</span>
           <h1>Paylaşmadan önce<br /><em>görünmez kılın.</em></h1>
-          <p>Dilekçe ve eklerinizdeki kişisel verileri otomatik bulur, maskeler ve son kontrolünüze hazırlar.</p>
+          <p>Dilekçe ve eklerinizi ChatGPT, Claude, Gemini veya başka bir AI aracına yüklemeden önce kişisel verileri otomatik bulur ve maskeler.</p>
         </div>
         <div
           className={`drop-card ${dragging ? "dragging" : ""}`}
