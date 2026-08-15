@@ -26,8 +26,17 @@ const patterns: Array<{ category: MaskCategory; regex: RegExp; group?: number }>
   { category: "iban", regex: /\bTR\s*\d{2}(?:\s*\d){22}\b/gi },
   { category: "birthDate", regex: /(?:doğum\s*tarihi|d\.\s*tarihi|doğ\.?\s*tarihi)\s*[:\-]?\s*(\d{1,2}[./-]\d{1,2}[./-](?:19|20)\d{2})/gi, group: 1 },
   { category: "address", regex: /(?:adres(?:i)?|ikametgâh(?:ı)?|ikametgah(?:ı)?)\s*[:\-]\s*([^\n]{12,180})/gi, group: 1 },
-  { category: "name", regex: /(?:adı\s*soyadı|ad[ıi]\s*ve\s*soyadı|davacı|davalı|şüpheli|sanık|müşteki|mağdur|başvurucu|vekil\s*eden)\s*[:\-]\s*([A-ZÇĞİÖŞÜ][A-Za-zÇĞİÖŞÜçğıöşü'’-]+(?:\s+[A-ZÇĞİÖŞÜ][A-Za-zÇĞİÖŞÜçğıöşü'’-]+){1,3})/gi, group: 1 },
+  { category: "name", regex: /(?:(?:davacı|davalı|şüpheli|sanık|müşteki|mağdur|başvurucu|katılan|borçlu|alacaklı|mirasçı|ilgili)[ \t]+vekili|adı[ \t]*[-–]?[ \t]*soyadı|ad[ıi][ \t]+ve[ \t]+soyadı|ad[ \t]*soyad|davacı|davalı|şüpheli|sanık|müşteki|mağdur|başvurucu|katılan|tanık|bilirkişi|borçlu|alacaklı|mirasçı|ilgili|anne(?:si)?|baba(?:sı)?|vekil[ \t]+eden)[ \t]*[:\-–]?[ \t]*(?:(?:av\.?|avukat|dr\.?|prof\.?)?[ \t]+)?([A-ZÇĞİÖŞÜ][A-Za-zÇĞİÖŞÜçğıöşü'’-]+(?:[ \t]+[A-ZÇĞİÖŞÜ][A-Za-zÇĞİÖŞÜçğıöşü'’-]+){1,4})/gi, group: 1 },
 ];
+
+const likelyNamePattern = /(?<![\p{L}])([A-ZÇĞİÖŞÜ][a-zçğıöşü]{1,}(?:['’-][A-ZÇĞİÖŞÜ]?[a-zçğıöşü]+)?(?:[ \t]+[A-ZÇĞİÖŞÜ][a-zçğıöşü]{1,}(?:['’-][A-ZÇĞİÖŞÜ]?[a-zçğıöşü]+)?){1,6})(?![\p{L}])/gu;
+const legalStopWords = new Set([
+  "asliye", "sulh", "hukuk", "ceza", "mahkemesi", "mahkeme", "dairesi", "başkanlığı", "müdürlüğü", "müdürlüğüne",
+  "cumhuriyet", "başsavcılığı", "adliyesi", "bölge", "idare", "vergi", "icra", "dosya", "esas", "karar", "sayılı", "tarihli",
+  "türk", "medeni", "kanunu", "mahallesi", "caddesi", "sokağı", "sokak", "bulvarı", "apartmanı", "kat", "daire", "sayın",
+  "davacı", "davalı", "şüpheli", "sanık", "müşteki", "mağdur", "başvurucu", "katılan", "tanık", "bilirkişi", "vekili", "vekil",
+  "dilekçeyi", "sunan", "kimlik", "numarası", "no", "doğum", "tarihi", "adres", "telefon", "eposta",
+]);
 
 function validTc(value: string) {
   const digits = value.split("").map(Number);
@@ -41,12 +50,14 @@ export function detectFindings(text: string): Finding[] {
   const results: Finding[] = [];
   for (const pattern of patterns) {
     pattern.regex.lastIndex = 0;
-    for (const match of text.matchAll(pattern.regex)) {
-      const value = pattern.group ? match[pattern.group] : match[0];
-      if (!value || match.index === undefined) continue;
-      if (pattern.category === "tc" && !validTc(value)) continue;
-      const relative = pattern.group ? match[0].lastIndexOf(value) : 0;
+    const searchText = pattern.category === "name" ? text.toLocaleLowerCase("tr-TR") : text;
+    for (const match of searchText.matchAll(pattern.regex)) {
+      const matchedValue = pattern.group ? match[pattern.group] : match[0];
+      if (!matchedValue || match.index === undefined) continue;
+      if (pattern.category === "tc" && !validTc(matchedValue)) continue;
+      const relative = pattern.group ? match[0].lastIndexOf(matchedValue) : 0;
       const start = match.index + relative;
+      const value = text.slice(start, start + matchedValue.length);
       results.push({
         id: `${pattern.category}-${start}-${value}`,
         category: pattern.category,
@@ -55,6 +66,26 @@ export function detectFindings(text: string): Finding[] {
         end: start + value.length,
         enabled: true,
       });
+    }
+  }
+
+  for (const match of text.matchAll(likelyNamePattern)) {
+    const candidate = match[1];
+    if (!candidate || match.index === undefined) continue;
+    const tokens = candidate.split(/[ \t]+/);
+    let runStart = 0;
+    for (let index = 0; index <= tokens.length; index += 1) {
+      const normalized = tokens[index]?.toLocaleLowerCase("tr-TR").replace(/[.'’]/g, "");
+      if (index === tokens.length || legalStopWords.has(normalized)) {
+        const run = tokens.slice(runStart, index);
+        if (run.length >= 2 && run.length <= 5) {
+          const value = run.join(" ");
+          const relative = candidate.indexOf(value);
+          const start = match.index + relative;
+          results.push({ id: `name-${start}-${value}`, category: "name", value, start, end: start + value.length, enabled: true });
+        }
+        runStart = index + 1;
+      }
     }
   }
 

@@ -5,7 +5,16 @@ import { ArrowLeft, Check, ChevronRight, Download, FileCheck2, FileText, LockKey
 import { categoryMeta, detectFindings, Finding, maskedText, MaskCategory } from "./masking";
 
 type AppStep = "upload" | "processing" | "review";
-type LoadedDocument = { name: string; size: number; text: string; pages?: number; warning?: string };
+type LoadedDocument = {
+  name: string;
+  size: number;
+  text: string;
+  extension: string;
+  pages?: number;
+  warning?: string;
+  sourceBytes?: ArrayBuffer;
+  udfXml?: string;
+};
 
 const MAX_SIZE = 20 * 1024 * 1024;
 const categoryOrder = Object.keys(categoryMeta) as MaskCategory[];
@@ -20,36 +29,81 @@ async function readFile(file: File): Promise<LoadedDocument> {
   if (file.size > MAX_SIZE) throw new Error("Dosya 20 MB sınırını aşıyor.");
 
   if (extension === "txt") {
-    return { name: file.name, size: file.size, text: await file.text() };
+    return { name: file.name, size: file.size, extension, text: await file.text() };
   }
 
   if (extension === "docx") {
     const mammoth = await import("mammoth/mammoth.browser");
     const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
-    return { name: file.name, size: file.size, text: result.value, warning: result.messages.length ? "Word belgesindeki bazı biçimler sadeleştirildi." : undefined };
+    return { name: file.name, size: file.size, extension, text: result.value, warning: result.messages.length ? "Word belgesindeki bazı biçimler sadeleştirildi." : undefined };
+  }
+
+  if (extension === "udf") {
+    const JSZip = (await import("jszip")).default;
+    const sourceBytes = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(sourceBytes);
+    const contentFile = zip.file("content.xml");
+    if (!contentFile) throw new Error("UDF içinde content.xml bulunamadı.");
+    const udfXml = await contentFile.async("text");
+    const contentMatch = udfXml.match(/<content\b[^>]*>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/content>/i);
+    if (!contentMatch) throw new Error("UDF metin içeriği okunamadı.");
+    return { name: file.name, size: file.size, extension, text: contentMatch[1], sourceBytes, udfXml, warning: "Maskeli UDF dışa aktarılırken eski elektronik imza kaldırılır; belgeyi UYAP'ta yeniden imzalamanız gerekir." };
   }
 
   if (extension === "pdf") {
     const pdfjs = await import("pdfjs-dist");
-    pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+    pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
     const document = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
     const pages: string[] = [];
+    const ocrPages: number[] = [];
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
       const page = await document.getPage(pageNumber);
       const content = await page.getTextContent();
-      pages.push(content.items.map((item) => ("str" in item ? item.str : "")).join(" "));
+      const pageText = content.items.map((item) => {
+        if (!("str" in item)) return "";
+        const lineEnd = "hasEOL" in item && item.hasEOL ? "\n" : " ";
+        return `${item.str}${lineEnd}`;
+      }).join("").replace(/[ \t]+\n/g, "\n");
+      pages.push(pageText);
+      if (pageText.trim().length < 20) ocrPages.push(pageNumber);
+    }
+
+    if (ocrPages.length) {
+      const { createWorker, OEM } = await import("tesseract.js");
+      const ocrWorker = await createWorker("tur", OEM.LSTM_ONLY, {
+        workerPath: "/tesseract/worker.min.js",
+        langPath: "/tesseract/lang",
+        corePath: "/tesseract/core",
+      });
+      try {
+        for (const pageNumber of ocrPages) {
+          const page = await document.getPage(pageNumber);
+          const viewport = page.getViewport({ scale: 1.8 });
+          const canvas = window.document.createElement("canvas");
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+          const context = canvas.getContext("2d", { willReadFrequently: true });
+          if (!context) throw new Error("PDF sayfası OCR için hazırlanamadı.");
+          await page.render({ canvas, canvasContext: context, viewport }).promise;
+          const result = await ocrWorker.recognize(canvas);
+          pages[pageNumber - 1] = result.data.text;
+        }
+      } finally {
+        await ocrWorker.terminate();
+      }
     }
     const text = pages.join("\n\n");
     return {
       name: file.name,
       size: file.size,
+      extension,
       text,
       pages: document.numPages,
-      warning: text.trim().length < 40 ? "Bu PDF taranmış görüntü olabilir. Metin bulunamadığı için OCR ile kontrol edilmesi gerekir." : undefined,
+      warning: ocrPages.length ? `${ocrPages.length} taranmış sayfa Türkçe OCR ile okundu. OCR sonuçlarını mutlaka kontrol edin.` : undefined,
     };
   }
 
-  throw new Error("Yalnızca PDF, DOCX veya TXT dosyaları destekleniyor.");
+  throw new Error("Yalnızca UDF, PDF, DOCX veya TXT dosyaları destekleniyor.");
 }
 
 function renderDocument(text: string, findings: Finding[], onToggle: (id: string) => void) {
@@ -84,6 +138,7 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [manualName, setManualName] = useState("");
 
   const activeCount = findings.filter((item) => item.enabled).length;
   const counts = useMemo(() => categoryOrder.reduce((acc, category) => {
@@ -124,6 +179,7 @@ export default function Home() {
     setFindings([]);
     setSelectedId(null);
     setSearch("");
+    setManualName("");
     setError("");
     if (inputRef.current) inputRef.current.value = "";
   }
@@ -136,6 +192,47 @@ export default function Home() {
     link.download = `${document.name.replace(/\.[^.]+$/, "")}-maskeli.txt`;
     link.click();
     URL.revokeObjectURL(link.href);
+  }
+
+  async function downloadUdf() {
+    if (!document?.sourceBytes || !document.udfXml) return;
+    const JSZip = (await import("jszip")).default;
+    const zip = await JSZip.loadAsync(document.sourceBytes);
+    const sameLengthMasked = [...findings]
+      .filter((item) => item.enabled)
+      .sort((a, b) => b.start - a.start)
+      .reduce((output, finding) => `${output.slice(0, finding.start)}${finding.value.replace(/\S/g, "*")}${output.slice(finding.end)}`, document.text);
+    const updatedXml = document.udfXml.replace(/(<content\b[^>]*>\s*<!\[CDATA\[)[\s\S]*?(\]\]>\s*<\/content>)/i, `$1${sameLengthMasked}$2`);
+    zip.file("content.xml", updatedXml);
+    zip.remove("sign.sgn");
+    const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+    const link = window.document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${document.name.replace(/\.udf$/i, "")}-maskeli.udf`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+  function addManualName() {
+    if (!document) return;
+    const value = manualName.trim();
+    if (value.length < 3) return;
+    const additions: Finding[] = [];
+    let cursor = 0;
+    while (cursor < document.text.length) {
+      const start = document.text.indexOf(value, cursor);
+      if (start < 0) break;
+      const end = start + value.length;
+      if (!findings.some((item) => start < item.end && end > item.start)) additions.push({ id: `name-manual-${start}-${value}`, category: "name", value, start, end, enabled: true });
+      cursor = end;
+    }
+    if (additions.length) {
+      setFindings((items) => [...items, ...additions].sort((a, b) => a.start - b.start));
+      setSelectedId(additions[0].id);
+      setManualName("");
+    } else {
+      setError("Bu isim belgede aynı yazımla bulunamadı veya zaten maskeli.");
+    }
   }
 
   function printPdf() {
@@ -195,6 +292,11 @@ export default function Home() {
           <aside className="right-panel">
             <div className="result-summary"><span><ShieldCheck size={21} /></span><div><b>{activeCount} veri maskelenecek</b><small>Bulguya tıklayarak değiştirebilirsiniz.</small></div></div>
             <label className="search-box"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Bulgularda ara" />{search && <button onClick={() => setSearch("")}><X size={13} /></button>}</label>
+            <div className="manual-name-box">
+              <label htmlFor="manual-name">Kaçan ismi ekle</label>
+              <div><input id="manual-name" value={manualName} onChange={(event) => { setManualName(event.target.value); setError(""); }} onKeyDown={(event) => { if (event.key === "Enter") addManualName(); }} placeholder="Örn. Ayşe Yılmaz" /><button onClick={addManualName}>Ekle</button></div>
+              {error && <small>{error}</small>}
+            </div>
             <div className="findings-list">
               {filtered.length === 0 && <p className="empty-findings">Bu ölçüte uygun bulgu yok.</p>}
               {filtered.map((finding) => (
@@ -207,7 +309,11 @@ export default function Home() {
             </div>
             <div className="export-box">
               <p><b>UYAP’a hazır kopya</b>Orijinal dosyanız değişmeden kalır.</p>
-              <button className="primary-action" onClick={printPdf}><Download size={16} /> PDF olarak kaydet <ChevronRight size={16} /></button>
+              {document.extension === "udf" ? (
+                <button className="primary-action" onClick={() => void downloadUdf()}><Download size={16} /> Maskeli UDF indir <ChevronRight size={16} /></button>
+              ) : (
+                <button className="primary-action" onClick={printPdf}><Download size={16} /> PDF olarak kaydet <ChevronRight size={16} /></button>
+              )}
               <button className="secondary-action" onClick={downloadTxt}>Maskeli metni indir</button>
             </div>
           </aside>
@@ -238,8 +344,8 @@ export default function Home() {
           <h2>Evraklarınızı buraya bırakın</h2>
           <p>veya bilgisayarınızdan dosya seçin</p>
           <button onClick={() => inputRef.current?.click()}><Upload size={16} /> Dosya seç</button>
-          <input ref={inputRef} type="file" hidden accept=".pdf,.docx,.txt" onChange={(event) => void handleFile(event.target.files?.[0])} />
-          <div className="formats"><span>PDF</span><span>DOCX</span><span>TXT</span><b>•</b> En fazla 20 MB</div>
+          <input ref={inputRef} type="file" hidden accept=".udf,.pdf,.docx,.txt" onChange={(event) => void handleFile(event.target.files?.[0])} />
+          <div className="formats"><span>UDF</span><span>PDF</span><span>DOCX</span><span>TXT</span><b>•</b> En fazla 20 MB</div>
           {error && <div className="upload-error">{error}</div>}
         </div>
         <div className="trust-row">

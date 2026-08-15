@@ -14,12 +14,15 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "@tesseract.js-data/tur": "^1.0.0",
     "drizzle-orm": "0.45.2",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.468.0",
     "mammoth": "^1.12.1",
     "pdfjs-dist": "^6.2.108",
     "react": "19.2.6",
-    "react-dom": "19.2.6"
+    "react-dom": "19.2.6",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.37.1",
