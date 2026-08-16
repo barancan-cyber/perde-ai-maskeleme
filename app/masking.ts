@@ -50,7 +50,9 @@ export function detectFindings(text: string): Finding[] {
   const results: Finding[] = [];
   for (const pattern of patterns) {
     pattern.regex.lastIndex = 0;
-    const searchText = pattern.category === "name" ? text.toLocaleLowerCase("tr-TR") : text;
+    const searchText = pattern.category === "name" || pattern.category === "birthDate" || pattern.category === "address"
+      ? text.toLocaleLowerCase("tr-TR")
+      : text;
     for (const match of searchText.matchAll(pattern.regex)) {
       const matchedValue = pattern.group ? match[pattern.group] : match[0];
       if (!matchedValue || match.index === undefined) continue;

@@ -1,0 +1,8 @@
+DAVACI: Ayşe Yılmaz
+T.C. KİMLİK NO: 10000000146
+DOĞUM TARİHİ: 01.02.1990
+ADRES: Atatürk Mahallesi, Cumhuriyet Caddesi No: 10, Ankara
+TELEFON: 0532 123 45 67
+E-POSTA: ayse.yilmaz@example.com
+
+Maskelenmiş çıktı Türkçe karakterleri doğru göstermelidir: ÇĞİÖŞÜ çğıöşü.

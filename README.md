@@ -29,10 +29,8 @@ Başlatıcı penceresini kapattığınızda Perde de kapanır. Yeniden kullanmak
 2. Uygulamanın bulduğu ad-soyad, T.C. kimlik numarası, adres, doğum tarihi ve diğer kişisel verileri inceleyin.
 3. Maskelenmesini istemediğiniz bir bulgu varsa yanındaki seçimi kapatın. Atlanan bir isim görürseniz **manuel isim ekleme** alanından ekleyin.
 4. Ön izlemede belgenin doğru şekilde maskelendiğini mutlaka kontrol edin.
-5. **AI için PDF kaydet** veya **AI için maskeli metni indir** seçeneğini kullanın.
+5. **Maskeli PDF indir** veya **Maskeli Word indir** seçeneğini kullanın.
 6. Yapay zekâ aracına yalnızca kontrol ettiğiniz maskeli kopyayı yükleyin.
-
-PDF kaydederken tarayıcının yazdırma penceresi açılır. Hedef/yazıcı bölümünden **PDF olarak kaydet** seçeneğini seçin.
 
 ## Desteklenen dosyalar
 

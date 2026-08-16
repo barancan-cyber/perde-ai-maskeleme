@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { ArrowLeft, Check, ChevronRight, Download, FileCheck2, FileText, LockKeyhole, RotateCcw, Search, ShieldCheck, Sparkles, Upload, X } from "lucide-react";
+import type { TDocumentDefinitions } from "pdfmake/interfaces";
 import { categoryMeta, detectFindings, Finding, maskedText, MaskCategory } from "./masking";
 
 type AppStep = "upload" | "processing" | "review";
@@ -137,6 +138,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [manualName, setManualName] = useState("");
+  const [exporting, setExporting] = useState<"pdf" | "docx" | null>(null);
 
   const activeCount = findings.filter((item) => item.enabled).length;
   const counts = useMemo(() => categoryOrder.reduce((acc, category) => {
@@ -178,18 +180,95 @@ export default function Home() {
     setSelectedId(null);
     setSearch("");
     setManualName("");
+    setExporting(null);
     setError("");
     if (inputRef.current) inputRef.current.value = "";
   }
 
-  function downloadTxt() {
-    if (!document) return;
-    const blob = new Blob([maskedText(document.text, findings)], { type: "text/plain;charset=utf-8" });
+  function saveBlob(blob: Blob, fileName: string) {
     const link = window.document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `${document.name.replace(/\.[^.]+$/, "")}-maskeli.txt`;
+    link.download = fileName;
     link.click();
     URL.revokeObjectURL(link.href);
+  }
+
+  async function downloadDocx() {
+    if (!document || exporting) return;
+    setError("");
+    setExporting("docx");
+    try {
+      const { Document, Packer, Paragraph, TextRun } = await import("docx");
+      const content = maskedText(document.text, findings);
+      const body = content.split(/\r?\n/).map((line) => new Paragraph({
+        children: [new TextRun({ text: line || " ", font: "Calibri", size: 22, color: "000000" })],
+        spacing: { after: 120, line: 264 },
+      }));
+      const output = new Document({
+        creator: "Perde",
+        description: "AI ile paylaşım için kişisel verileri maskelenmiş belge",
+        sections: [{
+          properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: "AI İçin Maskelenmiş Kopya", bold: true, font: "Calibri", size: 32, color: "2E74B5" })],
+              spacing: { after: 320 },
+            }),
+            ...body,
+          ],
+        }],
+      });
+      saveBlob(await Packer.toBlob(output), "ai-icin-maskeli-kopya.docx");
+    } catch {
+      setError("Word dosyası oluşturulamadı. Lütfen yeniden deneyin.");
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function downloadPdf() {
+    if (!document || exporting) return;
+    setError("");
+    setExporting("pdf");
+    try {
+      const [pdfMakeModule, pdfFontsModule] = await Promise.all([
+        import("pdfmake/build/pdfmake"),
+        import("pdfmake/build/vfs_fonts"),
+      ]);
+      const pdfMake = pdfMakeModule.default ?? pdfMakeModule;
+      const pdfFonts = pdfFontsModule.default ?? pdfFontsModule;
+      pdfMake.addVirtualFileSystem(pdfFonts);
+      const definition: TDocumentDefinitions = {
+        pageSize: "LETTER",
+        pageMargins: [72, 72, 72, 72],
+        content: [
+          { text: "AI İçin Maskelenmiş Kopya", style: "title" },
+          ...maskedText(document.text, findings).split(/\r?\n/).map((line) => ({ text: line || " ", style: "body" })),
+        ],
+        defaultStyle: { font: "Roboto", fontSize: 11, color: "#000000", lineHeight: 1.1 },
+        styles: {
+          title: { fontSize: 16, bold: true, color: "#2E74B5", margin: [0, 0, 0, 16] },
+          body: { fontSize: 11, margin: [0, 0, 0, 6], lineHeight: 1.1 },
+        },
+        footer: (currentPage, pageCount) => ({
+          text: `${currentPage} / ${pageCount}`,
+          alignment: "right",
+          color: "#6B7280",
+          fontSize: 8,
+          margin: [0, 12, 72, 0],
+        }),
+        info: {
+          title: "AI İçin Maskelenmiş Kopya",
+          author: "Perde",
+          subject: "Kişisel verileri maskelenmiş belge",
+        },
+      };
+      pdfMake.createPdf(definition).download("ai-icin-maskeli-kopya.pdf");
+    } catch {
+      setError("PDF dosyası oluşturulamadı. Lütfen yeniden deneyin.");
+    } finally {
+      setExporting(null);
+    }
   }
 
   function addManualName() {
@@ -212,10 +291,6 @@ export default function Home() {
     } else {
       setError("Bu isim belgede aynı yazımla bulunamadı veya zaten maskeli.");
     }
-  }
-
-  function printPdf() {
-    window.print();
   }
 
   if (step === "processing") {
@@ -288,8 +363,9 @@ export default function Home() {
             </div>
             <div className="export-box">
               <p><b>AI ile paylaşmaya hazır</b>Yalnızca maskeli kopyayı AI aracına yükleyin.</p>
-              <button className="primary-action" onClick={printPdf}><Download size={16} /> AI için PDF kaydet <ChevronRight size={16} /></button>
-              <button className="secondary-action" onClick={downloadTxt}>AI için maskeli metni indir</button>
+              <button className="primary-action" disabled={exporting !== null} onClick={() => void downloadPdf()}><Download size={16} /> {exporting === "pdf" ? "PDF hazırlanıyor…" : "Maskeli PDF indir"} <ChevronRight size={16} /></button>
+              <button className="secondary-action" disabled={exporting !== null} onClick={() => void downloadDocx()}><Download size={15} /> {exporting === "docx" ? "Word hazırlanıyor…" : "Maskeli Word indir"}</button>
+              {error && <small className="export-error">{error}</small>}
             </div>
           </aside>
         </section>
