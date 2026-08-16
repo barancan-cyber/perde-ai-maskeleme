@@ -2,20 +2,35 @@
 
 Perde; dilekçe, tutanak ve diğer hukuki evrakları ChatGPT, Claude, Gemini veya başka bir yapay zekâ aracına göndermeden önce kişisel verileri bulup maskelemenize yardımcı olur.
 
-> Uygulamayı kullanmak için kodlama bilmeniz veya bilgisayarınıza bir program kurmanız gerekmez.
+Uygulama her kullanıcının kendi bilgisayarında `http://localhost:3000` adresinde çalışır. Evraklarınızı kullanmak için bir internet sitesine yüklemeniz gerekmez.
 
-## Uygulamayı aç
+## Kodlama bilmeyenler için kurulum
 
-**[Perde uygulamasını aç](https://perde-uyap-maskele.barancan86.chatgpt.site/)**
+### 1. Node.js'i kurun
+
+[Node.js indirme sayfasını](https://nodejs.org/) açın, **LTS** yazan sürümü indirip normal bir program gibi kurun. Bu işlem yalnızca bir kez yapılır.
+
+### 2. Perde'yi indirin
+
+GitHub sayfasının üst kısmındaki **Code** düğmesine, ardından **Download ZIP** seçeneğine basın. İnen ZIP dosyasını klasöre çıkarın.
+
+### 3. Perde'yi açın
+
+- **Windows:** `Perdeyi-Baslat.bat` dosyasına çift tıklayın.
+- **macOS:** `Perdeyi-Baslat.command` dosyasına çift tıklayın. macOS ilk çalıştırmada engellerse dosyaya sağ tıklayıp **Aç** seçeneğini kullanın.
+
+İlk çalıştırmada gerekli parçalar otomatik kurulur; bu işlem internet hızınıza göre birkaç dakika sürebilir. Hazır olduğunda tarayıcıda `http://localhost:3000` otomatik açılır.
+
+Başlatıcı penceresini kapattığınızda Perde de kapanır. Yeniden kullanmak için aynı başlatıcıya çift tıklamanız yeterlidir.
 
 ## Nasıl kullanılır?
 
-1. Yukarıdaki bağlantıdan uygulamayı açın.
-2. **Evrak seç** alanına tıklayın veya dosyanızı kutunun üzerine sürükleyin.
-3. Uygulamanın bulduğu ad-soyad, T.C. kimlik numarası, adres, doğum tarihi ve diğer kişisel verileri inceleyin.
-4. Maskelenmesini istemediğiniz bir bulgu varsa yanındaki seçimi kapatın. Atlanan bir isim görürseniz **manuel isim ekleme** alanından ekleyin.
-5. Ön izlemede belgenin doğru şekilde maskelendiğini mutlaka kontrol edin.
-6. **AI için PDF kaydet** veya **AI için maskeli metni indir** seçeneğini kullanın. Yapay zekâ aracına yalnızca bu maskeli kopyayı yükleyin.
+1. **Evrak seç** alanına tıklayın veya dosyanızı kutunun üzerine sürükleyin.
+2. Uygulamanın bulduğu ad-soyad, T.C. kimlik numarası, adres, doğum tarihi ve diğer kişisel verileri inceleyin.
+3. Maskelenmesini istemediğiniz bir bulgu varsa yanındaki seçimi kapatın. Atlanan bir isim görürseniz **manuel isim ekleme** alanından ekleyin.
+4. Ön izlemede belgenin doğru şekilde maskelendiğini mutlaka kontrol edin.
+5. **AI için PDF kaydet** veya **AI için maskeli metni indir** seçeneğini kullanın.
+6. Yapay zekâ aracına yalnızca kontrol ettiğiniz maskeli kopyayı yükleyin.
 
 PDF kaydederken tarayıcının yazdırma penceresi açılır. Hedef/yazıcı bölümünden **PDF olarak kaydet** seçeneğini seçin.
 
@@ -36,15 +51,13 @@ Taranmış veya fotoğraf olarak oluşturulmuş PDF'lerde metin, OCR ile okunmay
 - Yapay zekâ aracına orijinal belgeyi değil, yalnızca kontrol ettiğiniz maskeli kopyayı yükleyin.
 - Bu araç hukuki danışmanlık veya mevzuata uygunluk garantisi vermez; son kontrol kullanıcıya aittir.
 
-## Geliştiriciler için yerel kurulum
-
-Bu bölüm yalnızca projeyi kendi bilgisayarında çalıştırmak isteyen geliştiriciler içindir.
+## Geliştiriciler için
 
 Gereksinim: Node.js `>=22.13.0`
 
 ```bash
-npm install
-npm run dev
+npm ci
+npm run dev -- --host 127.0.0.1 --port 3000
 ```
 
 Üretim derlemesini kontrol etmek için:
