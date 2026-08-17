@@ -13,6 +13,8 @@ GitHub sayfasındaki **Releases** bölümünden işletim sisteminize uygun dosya
 - **Windows 10/11:** `.exe` dosyasını indirip çalıştırın. Node.js kurulması gerekmez.
 - **macOS:** `.dmg` dosyasını indirip açın ve Perde'yi Uygulamalar klasörüne sürükleyin. Node.js kurulması gerekmez.
 
+macOS paketi Apple Developer sertifikasıyla noterlenmediği için ilk açılışta güvenlik uyarısı gösterebilir. Perde'yi **Uygulamalar** klasörüne taşıdıktan sonra sağ tıklayıp **Aç** seçeneğini kullanın. Gerekirse **Sistem Ayarları → Gizlilik ve Güvenlik → Yine de Aç** yolunu izleyin.
+
 Aşağıdaki Node.js adımları yalnızca kaynak koddan çalıştırmak isteyen kullanıcılar içindir.
 
 ### 1. Node.js'i kurun

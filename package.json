@@ -1,6 +1,6 @@
 {
   "name": "perde-ai-maskeleme",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Hukuki evraklar için cihaz üzerinde çalışan kişisel veri maskeleme uygulaması",
   "author": "Baran Can Kaya",
   "private": true,
@@ -65,6 +65,7 @@
   "build": {
     "appId": "tr.perde.maskeleme",
     "productName": "Perde",
+    "afterPack": "desktop/after-pack.cjs",
     "directories": {
       "output": "release"
     },
