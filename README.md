@@ -6,6 +6,15 @@ Uygulama her kullanıcının kendi bilgisayarında `http://localhost:3000` adres
 
 ## Kodlama bilmeyenler için kurulum
 
+### Hazır masaüstü uygulaması (önerilen)
+
+GitHub sayfasındaki **Releases** bölümünden işletim sisteminize uygun dosyayı indirin:
+
+- **Windows 10/11:** `.exe` dosyasını indirip çalıştırın. Node.js kurulması gerekmez.
+- **macOS:** `.dmg` dosyasını indirip açın ve Perde'yi Uygulamalar klasörüne sürükleyin. Node.js kurulması gerekmez.
+
+Aşağıdaki Node.js adımları yalnızca kaynak koddan çalıştırmak isteyen kullanıcılar içindir.
+
 ### 1. Node.js'i kurun
 
 [Node.js indirme sayfasını](https://nodejs.org/en/download) açın, **LTS** yazan 22.13 veya daha yeni bir sürümü indirip normal bir program gibi kurun. Bu işlem yalnızca bir kez yapılır. Windows'ta Node.js'i yeni kurduysanız kurulumu tamamladıktan sonra bilgisayarı yeniden başlatın.

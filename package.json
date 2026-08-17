@@ -1,7 +1,10 @@
 {
-  "name": "site-creator-vinext-starter",
-  "version": "0.1.0",
+  "name": "perde-ai-maskeleme",
+  "version": "1.0.0",
+  "description": "Hukuki evraklar için cihaz üzerinde çalışan kişisel veri maskeleme uygulaması",
+  "author": "Baran Can Kaya",
   "private": true,
+  "main": "desktop/electron.cjs",
   "engines": {
     "node": ">=22.13.0"
   },
@@ -9,6 +12,10 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "vinext start",
+    "desktop:build-web": "vite build --config vite.desktop.config.ts",
+    "desktop:dev": "npm run desktop:build-web && electron .",
+    "desktop:package:mac": "electron-builder --mac dmg --arm64 --x64 --publish never",
+    "desktop:package:win": "electron-builder --win nsis portable --x64 --publish never",
     "test": "npm run build && node --test tests/rendered-html.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"
@@ -39,6 +46,8 @@
     "@vitejs/plugin-react": "6.0.2",
     "@vitejs/plugin-rsc": "0.5.26",
     "drizzle-kit": "0.31.10",
+    "electron": "^43.4.0",
+    "electron-builder": "^26.15.3",
     "eslint": "9.39.4",
     "eslint-plugin-jsx-a11y": "6.10.2",
     "eslint-plugin-react": "7.37.5",
@@ -52,5 +61,53 @@
     "vite": "8.0.13",
     "wrangler": "4.92.0"
   },
-  "type": "module"
+  "type": "module",
+  "build": {
+    "appId": "tr.perde.maskeleme",
+    "productName": "Perde",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "desktop/electron.cjs"
+    ],
+    "extraResources": [
+      {
+        "from": "desktop-dist",
+        "to": "desktop-dist"
+      }
+    ],
+    "mac": {
+      "artifactName": "Perde-${version}-macOS-${arch}.${ext}",
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg"
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "artifactName": "Perde-Kurulum-${version}-Windows-${arch}.${ext}",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "portable": {
+      "artifactName": "Perde-Tasinabilir-${version}-Windows-${arch}.${ext}"
+    }
+  }
 }

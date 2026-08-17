@@ -45,3 +45,21 @@ test("keeps local launchers and Word/PDF exports available", async () => {
   assert.match(packageJson, /"docx"/);
   assert.match(packageJson, /"pdfmake"/);
 });
+
+test("ships Node-free Windows and macOS desktop packaging", async () => {
+  const [desktopMain, electronMain, packageJson, workflow] = await Promise.all([
+    readFile(new URL("../desktop/main.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../desktop/electron.cjs", import.meta.url), "utf8"),
+    readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../.github/workflows/desktop-packages.yml", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(desktopMain, /import Perde from "\.\.\/app\/page"/);
+  assert.match(electronMain, /nodeIntegration: false/);
+  assert.match(electronMain, /contextIsolation: true/);
+  assert.match(electronMain, /listen\(0, "127\.0\.0\.1"/);
+  assert.match(packageJson, /desktop:package:win/);
+  assert.match(packageJson, /desktop:package:mac/);
+  assert.match(workflow, /windows-latest/);
+  assert.match(workflow, /macos-latest/);
+});
