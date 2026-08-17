@@ -8,7 +8,7 @@ Uygulama her kullanıcının kendi bilgisayarında `http://localhost:3000` adres
 
 ### 1. Node.js'i kurun
 
-[Node.js indirme sayfasını](https://nodejs.org/) açın, **LTS** yazan sürümü indirip normal bir program gibi kurun. Bu işlem yalnızca bir kez yapılır.
+[Node.js indirme sayfasını](https://nodejs.org/en/download) açın, **LTS** yazan 22.13 veya daha yeni bir sürümü indirip normal bir program gibi kurun. Bu işlem yalnızca bir kez yapılır. Windows'ta Node.js'i yeni kurduysanız kurulumu tamamladıktan sonra bilgisayarı yeniden başlatın.
 
 ### 2. Perde'yi indirin
 
@@ -22,6 +22,16 @@ GitHub sayfasının üst kısmındaki **Code** düğmesine, ardından **Download
 İlk çalıştırmada gerekli parçalar otomatik kurulur; bu işlem internet hızınıza göre birkaç dakika sürebilir. Hazır olduğunda tarayıcıda `http://localhost:3000` otomatik açılır.
 
 Başlatıcı penceresini kapattığınızda Perde de kapanır. Yeniden kullanmak için aynı başlatıcıya çift tıklamanız yeterlidir.
+
+### Windows'ta açılmazsa
+
+1. ZIP dosyasını mutlaka klasöre çıkarın; uygulamayı ZIP penceresinin içinden çalıştırmayın.
+2. `Perdeyi-Baslat.bat` dosyasına sağ tıklayıp **Yönetici olarak çalıştır** seçeneğini deneyin.
+3. Başlatıcı artık hata olduğunda kapanmaz. Siyah pencerede yazan Node.js sürümünü ve hata mesajını kontrol edin.
+4. Node.js sürümü 22'den eski görünüyorsa güncel LTS sürümünü kurup Windows'u yeniden başlatın.
+5. Windows Defender uyarı gösterirse **Daha fazla bilgi → Yine de çalıştır** seçeneğini yalnızca dosyayı bu resmi repodan indirdiyseniz kullanın.
+
+Tarayıcı otomatik açılmaz fakat siyah pencerede `ready` benzeri bir mesaj görünürse tarayıcınıza elle `http://localhost:3000` yazın.
 
 ## Nasıl kullanılır?
 
