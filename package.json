@@ -1,6 +1,6 @@
 {
   "name": "perde-ai-maskeleme",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Hukuki evraklar için cihaz üzerinde çalışan kişisel veri maskeleme uygulaması",
   "author": "Baran Can Kaya",
   "private": true,
